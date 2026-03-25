@@ -1,0 +1,9 @@
+# 方式二：简化认证（开发/单用户）
+# 只需要一个 token：
+#   - Authorization: Bearer <ntn_xxx>  (Notion Token直接作为Bearer)
+services:
+  notion-mcp-server:
+    build: .
+    ports:
+      - "3000:3000"
+    command: ["--transport", "http", "--port", "3000", "--disable-auth"]

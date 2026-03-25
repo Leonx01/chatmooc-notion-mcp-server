@@ -1,3 +1,7 @@
+# 方式一：分离认证（生产/多租户）
+# 需要两个 token：
+#   - Authorization: Bearer <mcp-auth-token>  (MCP服务器认证)
+#   - X-Notion-Token: <ntn_xxx>              (Notion API认证)
 services:
   notion-mcp-server:
     build: .
