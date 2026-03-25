@@ -90,16 +90,20 @@ export class MCPProxy {
   private tools: Record<string, NewToolDefinition>
   private openApiLookup: Record<string, OpenAPIV3.OperationObject & { method: string; path: string }>
 
-  constructor(name: string, openApiSpec: OpenAPIV3.Document) {
+  constructor(name: string, openApiSpec: OpenAPIV3.Document, customHeaders?: Record<string, string>) {
     this.server = new Server({ name, version: '1.0.0' }, { capabilities: { tools: {} } })
     const baseUrl = openApiSpec.servers?.[0].url
     if (!baseUrl) {
       throw new Error('No base URL found in OpenAPI spec')
     }
+    // 优先使用自定义 headers，其次从环境变量读取
+    const headers = customHeaders && Object.keys(customHeaders).length > 0
+      ? customHeaders
+      : this.parseHeadersFromEnv()
     this.httpClient = new HttpClient(
       {
         baseUrl,
-        headers: this.parseHeadersFromEnv(),
+        headers,
       },
       openApiSpec,
     )

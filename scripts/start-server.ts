@@ -97,6 +97,10 @@ Examples:
     }
 
     // Authorization middleware
+    // 支持两种认证方式：
+    // 1. Authorization: Bearer <mcp-auth-token> - 仅用于 MCP 连接认证
+    // 2. Authorization: Bearer ntn_xxxx - Notion token 同时作为 MCP 认证（开发便利）
+    // 3. X-Notion-Token: ntn_xxxx + Authorization: Bearer <mcp-auth-token> - 分离认证
     const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction): void => {
       const authHeader = req.headers['authorization']
       const token = authHeader && authHeader.split(' ')[1] // Bearer TOKEN
@@ -113,7 +117,11 @@ Examples:
         return
       }
 
-      if (token !== authToken) {
+      // 检查 token：
+      // - 如果是以 ntn_ 开头，认为是 Notion token，允许通过（用于开发便利）
+      // - 否则必须与配置的 authToken 匹配
+      const isNotionToken = token.startsWith('ntn_')
+      if (!isNotionToken && token !== authToken) {
         res.status(403).json({
           jsonrpc: '2.0',
           error: {
@@ -173,7 +181,31 @@ Examples:
             }
           }
 
-          const proxy = await initProxy(specPath, baseUrl)
+          // 从请求头中读取 Notion Token（支持 X-Notion-Token 或 Authorization）
+          const notionToken = req.headers['x-notion-token'] as string | undefined
+          const authHeader = req.headers['authorization'] as string | undefined
+
+          let customHeaders: Record<string, string> | undefined
+
+          if (notionToken) {
+            // 优先使用 X-Notion-Token
+            customHeaders = {
+              'Authorization': `Bearer ${notionToken}`,
+              'Notion-Version': '2025-09-03'
+            }
+          } else if (authHeader && authHeader.startsWith('Bearer ')) {
+            // 检查是否是 Notion token（以 ntn_ 开头）
+            const token = authHeader.substring(7)
+            if (token.startsWith('ntn_')) {
+              customHeaders = {
+                'Authorization': `Bearer ${token}`,
+                'Notion-Version': '2025-09-03'
+              }
+            }
+          }
+
+          // 如果没有提供自定义 token，则使用环境变量
+          const proxy = await initProxy(specPath, baseUrl, customHeaders)
           await proxy.connect(transport)
         } else {
           // Invalid request

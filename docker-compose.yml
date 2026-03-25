@@ -1,6 +1,8 @@
-services:
-  notion-mcp-server:
-    build: .
-    stdin_open: true
-    tty: true
-    restart: unless-stopped
+  services:
+    notion-mcp-server:
+      build: .
+      ports:
+        - "3000:3000"
+      environment:
+        - NOTION_TOKEN=${NOTION_TOKEN}
+      command: ["--transport", "http", "--port", "3000", "--auth-token", "your-secret-token"]
