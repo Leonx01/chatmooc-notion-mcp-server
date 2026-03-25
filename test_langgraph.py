@@ -30,13 +30,12 @@ async def test_with_merged_auth():
     print()
 
     try:
-        # 注意：需要先安装 langchain-mcp-adapters
-        # pip install langchain-mcp-adapters
         from langchain_mcp_adapters.client import MultiServerMCPClient
 
         print("正在连接 MCP Server...")
 
-        async with MultiServerMCPClient({
+        # 新版本 API：先创建 client，再获取 tools
+        client = MultiServerMCPClient({
             "notion": {
                 "transport": "http",
                 "url": MCP_SERVER_URL,
@@ -45,22 +44,17 @@ async def test_with_merged_auth():
                     "Authorization": f"Bearer {NOTION_TOKEN}"
                 }
             }
-        }) as client:
-            print("✅ 连接成功!")
-            print()
+        })
 
-            # 获取工具列表
-            print("正在获取工具列表...")
-            tools = await client.get_tools()
-            print(f"✅ 获取到 {len(tools)} 个工具:")
-            for tool in tools:
-                print(f"  - {tool.name}: {tool.description[:50]}...")
-            print()
+        # 获取工具列表
+        print("正在获取工具列表...")
+        tools = await client.get_tools()
+        print(f"✅ 获取到 {len(tools)} 个工具:")
+        for tool in tools:
+            print(f"  - {tool.name}: {tool.description[:50]}...")
+        print()
 
-            # 测试调用（可选）
-            # print("测试调用 tools/list...")
-            # result = await client.session.call_tool("search", {"query": ""})
-            # print(f"结果: {result}")
+        print("✅ 测试通过!")
 
     except ImportError as e:
         print(f"❌ 缺少依赖: {e}")
@@ -92,7 +86,8 @@ async def test_with_separated_auth():
 
         print("正在连接 MCP Server...")
 
-        async with MultiServerMCPClient({
+        # 新版本 API：先创建 client，再获取 tools
+        client = MultiServerMCPClient({
             "notion": {
                 "transport": "http",
                 "url": MCP_SERVER_URL,
@@ -102,19 +97,19 @@ async def test_with_separated_auth():
                     "X-Notion-Token": NOTION_TOKEN                # Notion API 认证
                 }
             }
-        }) as client:
-            print("✅ 连接成功!")
-            print()
+        })
 
-            # 获取工具列表
-            print("正在获取工具列表...")
-            tools = await client.get_tools()
-            print(f"✅ 获取到 {len(tools)} 个工具")
-            for tool in tools[:5]:  # 只显示前5个
-                print(f"  - {tool.name}")
-            if len(tools) > 5:
-                print(f"  ... 还有 {len(tools) - 5} 个工具")
-            print()
+        # 获取工具列表
+        print("正在获取工具列表...")
+        tools = await client.get_tools()
+        print(f"✅ 获取到 {len(tools)} 个工具")
+        for tool in tools[:5]:  # 只显示前5个
+            print(f"  - {tool.name}")
+        if len(tools) > 5:
+            print(f"  ... 还有 {len(tools) - 5} 个工具")
+        print()
+
+        print("✅ 测试通过!")
 
     except ImportError as e:
         print(f"❌ 缺少依赖: {e}")
