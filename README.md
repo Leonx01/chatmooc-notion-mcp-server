@@ -375,6 +375,70 @@ curl -H "Authorization: Bearer your-token-here" \
 
 **Note:** Make sure to set either the `NOTION_TOKEN` environment variable (recommended) or the `OPENAPI_MCP_HEADERS` environment variable with your Notion integration token when using either transport mode.
 
+##### Dynamic Notion Token (New Feature)
+
+This fork supports passing the Notion API token dynamically via HTTP headers, enabling multi-tenant scenarios where different users can use their own Notion workspaces without restarting the server.
+
+**Authentication Modes:**
+
+###### Option A: Separate MCP Auth and Notion Token (Recommended)
+
+Use different headers for MCP connection authentication and Notion API authentication:
+
+```bash
+# Start server without NOTION_TOKEN environment variable
+npx @notionhq/notion-mcp-server --transport http --auth-token "your-mcp-auth-token"
+
+# Client request with both tokens
+curl -H "Authorization: Bearer your-mcp-auth-token" \
+     -H "X-Notion-Token: ntn_xxxxx" \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}' \
+     http://localhost:3000/mcp
+```
+
+###### Option B: Use Notion Token as Bearer (Development Convenience)
+
+For development, you can use the Notion token directly as the Bearer token:
+
+```bash
+# Notion tokens (starting with 'ntn_') are automatically accepted as auth tokens
+curl -H "Authorization: Bearer ntn_xxxxx" \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}' \
+     http://localhost:3000/mcp
+```
+
+**LangGraph Client Example:**
+
+```python
+from langchain_mcp_adapters.client import MultiServerMCPClient
+
+async with MultiServerMCPClient({
+    "notion": {
+        "transport": "http",
+        "url": "http://localhost:3000/mcp",
+        "headers": {
+            "Authorization": "Bearer your-mcp-auth-token",
+            "X-Notion-Token": "ntn_xxxxx"  # Dynamic per-user token
+        }
+    }
+}) as client:
+    tools = await client.get_tools()
+```
+
+**Docker Compose with Dynamic Tokens:**
+
+```yaml
+services:
+  notion-mcp-server:
+    build: .
+    ports:
+      - "3000:3000"
+    command: ["--transport", "http", "--port", "3000", "--auth-token", "your-mcp-secret"]
+    # No NOTION_TOKEN needed - tokens are passed per-request!
+```
+
 ### Examples
 
 1. Using the following instruction
