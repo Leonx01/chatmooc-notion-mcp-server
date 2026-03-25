@@ -15,6 +15,12 @@
 
 ### Docker 部署
 
+本项目提供两个 Docker Compose 配置，对应两种认证方式：
+
+#### 方式一：分离认证（生产/多租户）
+
+使用 `docker-compose.yml`：
+
 ```yaml
 services:
   notion-mcp-server:
@@ -27,10 +33,39 @@ services:
 启动：
 
 ```bash
-docker compose up -d
+docker compose -f docker-compose.yml up -d
 ```
 
-> **注意**：不需要设置 `NOTION_TOKEN` 环境变量！
+**特点**：
+- 需要 `--auth-token` 设置 MCP 服务器认证密钥
+- 客户端需提供两个 Header：`Authorization`（MCP认证）+ `X-Notion-Token`（Notion认证）
+- 适合多租户场景，一个服务支持多个 Notion 用户
+
+#### 方式二：合并认证（开发/单用户）
+
+使用 `docker-compose.simple.yml`：
+
+```yaml
+services:
+  notion-mcp-server:
+    build: .
+    ports:
+      - "3000:3000"
+    command: ["--transport", "http", "--port", "3000", "--disable-auth"]
+```
+
+启动：
+
+```bash
+docker compose -f docker-compose.simple.yml up -d
+```
+
+**特点**：
+- 使用 `--disable-auth` 关闭 MCP 服务器认证
+- 客户端只需一个 Header：`Authorization: Bearer <ntn_xxxxx>`
+- 适合个人开发测试
+
+> **注意**：两种方式都不需要设置 `NOTION_TOKEN` 环境变量，Token 通过请求头动态传入！
 
 ### 本地运行
 
