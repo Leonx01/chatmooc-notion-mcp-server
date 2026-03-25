@@ -113,7 +113,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
 
 # 用户 A 使用自己的 Notion Token
-async with MultiServerMCPClient({
+client_a = MultiServerMCPClient({
     "notion": {
         "transport": "http",
         "url": "http://localhost:3000/mcp",
@@ -122,15 +122,12 @@ async with MultiServerMCPClient({
             "X-Notion-Token": "ntn_user_a_token"            # 变化，用户A的Notion
         }
     }
-}) as client:
-    tools = await client.get_tools()
-    agent = create_react_agent("claude-sonnet-4-6", tools)
-    result = await agent.ainvoke({
-        "messages": [{"role": "user", "content": "列出我的数据库"}]
-    })
+})
+tools_a = await client_a.get_tools()
+agent_a = create_react_agent("claude-sonnet-4-6", tools_a)
 
 # 用户 B 使用不同的 Notion Token，同一个服务器
-async with MultiServerMCPClient({
+client_b = MultiServerMCPClient({
     "notion": {
         "transport": "http",
         "url": "http://localhost:3000/mcp",
@@ -139,9 +136,9 @@ async with MultiServerMCPClient({
             "X-Notion-Token": "ntn_user_b_token"            # 不同的Notion密钥
         }
     }
-}) as client:
-    tools = await client.get_tools()
-    # ... 操作用户 B 的 Notion
+})
+tools_b = await client_b.get_tools()
+# ... 操作用户 B 的 Notion
 ```
 
 **适用场景**：
@@ -180,7 +177,7 @@ curl -H "Authorization: Bearer ntn_xxxxx" \
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
 
-async with MultiServerMCPClient({
+client = MultiServerMCPClient({
     "notion": {
         "transport": "http",
         "url": "http://localhost:3000/mcp",
@@ -189,12 +186,14 @@ async with MultiServerMCPClient({
             "Authorization": "Bearer ntn_xxxxx"
         }
     }
-}) as client:
-    tools = await client.get_tools()
-    agent = create_react_agent("claude-sonnet-4-6", tools)
-    result = await agent.ainvoke({
-        "messages": [{"role": "user", "content": "列出我的数据库"}]
-    })
+})
+tools = await client.get_tools()
+agent = create_react_agent("claude-sonnet-4-6", tools)
+
+# 调用工具搜索 Notion
+result = await agent.ainvoke({
+    "messages": [{"role": "user", "content": "列出我的数据库"}]
+})
 ```
 
 **适用场景**：
@@ -218,26 +217,43 @@ async with MultiServerMCPClient({
 
 ## 测试验证
 
-运行 `python test_langgraph.py` 后，如果看到类似下面的输出，说明**连接成功**：
+1. 启动 Docker：
+   ```bash
+   docker compose -f docker-compose.simple.yml up -d
+   ```
+
+2. 创建 `.env` 文件：
+   ```
+   NOTION_TOKEN=ntn_xxxxx
+   MCP_SERVER_URL=http://localhost:3000/mcp
+   ```
+
+3. 安装依赖并运行测试：
+   ```bash
+   pip install langchain-mcp-adapters langgraph python-dotenv
+   python test_langgraph.py
+   ```
+
+**预期输出**：
 
 ```
 ==================================================
-测试方式二：合并认证
+Test: Call Notion Tool
 ==================================================
-Notion Token: ntn_12345...
-MCP Server: http://localhost:3000/mcp
+Notion Token: ntn_z59972...
 
-正在连接 MCP Server...
-正在获取工具列表...
-✅ 获取到 22 个工具:
-  - API-post-search: Search by title...
-  - API-get-block-children: Retrieve block children...
-  - API-query-data-source: Query a data source...
-  ...
-✅ 测试通过!
+Getting tools...
+[OK] Got 22 tools
+
+Calling tool: API-post-search
+
+[OK] Found 1 results:
+  Page: ChatMOOC
+
+[OK] Tool call test passed!
 ```
 
-> **注意**：工具列表中的 `Error Responses: 400: Bad...` 是 OpenAPI 文档中的**错误说明**，不是实际错误。表示该工具在参数错误时会返回 400 状态码。
+> **注意**：工具列表中的 `Error Responses: 400: Bad...` 是 OpenAPI 文档中的**错误说明**，不是实际错误。
 
 ---
 
