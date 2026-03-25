@@ -181,6 +181,31 @@ async with MultiServerMCPClient({
 
 ---
 
+## 测试验证
+
+运行 `python test_langgraph.py` 后，如果看到类似下面的输出，说明**连接成功**：
+
+```
+==================================================
+测试方式二：合并认证
+==================================================
+Notion Token: ntn_12345...
+MCP Server: http://localhost:3000/mcp
+
+正在连接 MCP Server...
+正在获取工具列表...
+✅ 获取到 22 个工具:
+  - API-post-search: Search by title...
+  - API-get-block-children: Retrieve block children...
+  - API-query-data-source: Query a data source...
+  ...
+✅ 测试通过!
+```
+
+> **注意**：工具列表中的 `Error Responses: 400: Bad...` 是 OpenAPI 文档中的**错误说明**，不是实际错误。表示该工具在参数错误时会返回 400 状态码。
+
+---
+
 ## 获取 Notion Token
 
 1. 访问 [Notion Integration](https://www.notion.so/profile/integrations)
