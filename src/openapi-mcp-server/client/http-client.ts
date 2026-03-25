@@ -32,8 +32,10 @@ export class HttpClientError extends Error {
 export class HttpClient {
   private api: Promise<AxiosInstance>
   private client: OpenAPIClientAxios
+  private currentHeaders: Record<string, string>
 
   constructor(config: HttpClientConfig, openApiSpec: OpenAPIV3.Document | OpenAPIV3_1.Document) {
+    this.currentHeaders = config.headers || {}
     // @ts-expect-error
     this.client = new (OpenAPIClientAxios.default ?? OpenAPIClientAxios)({
       definition: openApiSpec,
@@ -42,11 +44,18 @@ export class HttpClient {
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'notion-mcp-server',
-          ...config.headers,
+          ...this.currentHeaders,
         },
       },
     })
     this.api = this.client.init()
+  }
+
+  /**
+   * 动态更新请求头（用于多租户场景）
+   */
+  updateHeaders(headers: Record<string, string>) {
+    this.currentHeaders = { ...this.currentHeaders, ...headers }
   }
 
   private async prepareFileUpload(operation: OpenAPIV3.OperationObject, params: Record<string, any>): Promise<FormData | null> {
@@ -157,6 +166,7 @@ export class HttpClient {
         : { ...(hasBody ? { 'Content-Type': 'application/json' } : { 'Content-Type': null }) }
       const requestConfig = {
         headers: {
+          ...this.currentHeaders,  // 包含动态更新的 Authorization header
           ...headers,
         },
       }

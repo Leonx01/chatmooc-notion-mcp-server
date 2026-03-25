@@ -151,8 +151,31 @@ Examples:
       app.use('/mcp', authenticateToken)
     }
 
-    // Map to store transports by session ID
+    // Map to store transports and proxies by session ID
     const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {}
+    const proxies: { [sessionId: string]: Awaited<ReturnType<typeof initProxy>> } = {}
+
+    // Helper function to extract Notion headers from request
+    const extractNotionHeaders = (req: express.Request): Record<string, string> | undefined => {
+      const notionToken = req.headers['x-notion-token'] as string | undefined
+      const authHeader = req.headers['authorization'] as string | undefined
+
+      if (notionToken) {
+        return {
+          'Authorization': `Bearer ${notionToken}`,
+          'Notion-Version': '2025-09-03'
+        }
+      } else if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7)
+        if (token.startsWith('ntn_')) {
+          return {
+            'Authorization': `Bearer ${token}`,
+            'Notion-Version': '2025-09-03'
+          }
+        }
+      }
+      return undefined
+    }
 
     // Handle POST requests for client-to-server communication
     app.post('/mcp', async (req, res) => {
@@ -162,15 +185,29 @@ Examples:
         let transport: StreamableHTTPServerTransport
 
         if (sessionId && transports[sessionId]) {
-          // Reuse existing transport
+          // Reuse existing transport - UPDATE HEADERS FOR EACH REQUEST
           transport = transports[sessionId]
+          const proxy = proxies[sessionId]
+          if (proxy) {
+            const customHeaders = extractNotionHeaders(req)
+            if (customHeaders) {
+              proxy.updateHeaders(customHeaders)
+            }
+          }
         } else if (!sessionId && isInitializeRequest(req.body)) {
+          // 从请求头中读取 Notion Token
+          const customHeaders = extractNotionHeaders(req)
+
+          // 创建 proxy
+          const proxy = await initProxy(specPath, baseUrl, customHeaders)
+
           // New initialization request
           transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => randomUUID(),
             onsessioninitialized: (sessionId) => {
-              // Store the transport by session ID
+              // Store both transport and proxy by session ID
               transports[sessionId] = transport
+              proxies[sessionId] = proxy
             }
           })
 
@@ -178,34 +215,10 @@ Examples:
           transport.onclose = () => {
             if (transport.sessionId) {
               delete transports[transport.sessionId]
+              delete proxies[transport.sessionId]
             }
           }
 
-          // 从请求头中读取 Notion Token（支持 X-Notion-Token 或 Authorization）
-          const notionToken = req.headers['x-notion-token'] as string | undefined
-          const authHeader = req.headers['authorization'] as string | undefined
-
-          let customHeaders: Record<string, string> | undefined
-
-          if (notionToken) {
-            // 优先使用 X-Notion-Token
-            customHeaders = {
-              'Authorization': `Bearer ${notionToken}`,
-              'Notion-Version': '2025-09-03'
-            }
-          } else if (authHeader && authHeader.startsWith('Bearer ')) {
-            // 检查是否是 Notion token（以 ntn_ 开头）
-            const token = authHeader.substring(7)
-            if (token.startsWith('ntn_')) {
-              customHeaders = {
-                'Authorization': `Bearer ${token}`,
-                'Notion-Version': '2025-09-03'
-              }
-            }
-          }
-
-          // 如果没有提供自定义 token，则使用环境变量
-          const proxy = await initProxy(specPath, baseUrl, customHeaders)
           await proxy.connect(transport)
         } else {
           // Invalid request

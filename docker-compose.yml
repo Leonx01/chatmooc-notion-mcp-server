@@ -8,3 +8,4 @@ services:
     ports:
       - "3000:3000"
     command: ["--transport", "http", "--port", "3000", "--auth-token", "your-mcp-secret"]
+

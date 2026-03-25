@@ -117,6 +117,13 @@ export class MCPProxy {
     this.setupHandlers()
   }
 
+  /**
+   * 动态更新 Notion API 请求头（用于多租户场景）
+   */
+  updateHeaders(headers: Record<string, string>) {
+    this.httpClient.updateHeaders(headers)
+  }
+
   private setupHandlers() {
     // Handle tool listing
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {

@@ -6,6 +6,9 @@ import OpenAPISchemaValidator from 'openapi-schema-validator'
 
 import { MCPProxy } from './openapi-mcp-server/mcp/proxy'
 
+// 导出 MCPProxy 类型供外部使用
+export { MCPProxy }
+
 export class ValidationError extends Error {
   constructor(public errors: any[]) {
     super('OpenAPI validation failed')
@@ -42,7 +45,7 @@ async function loadOpenApiSpec(specPath: string, baseUrl: string | undefined): P
   }
 }
 
-export async function initProxy(specPath: string, baseUrl: string | undefined, customHeaders?: Record<string, string>) {
+export async function initProxy(specPath: string, baseUrl: string | undefined, customHeaders?: Record<string, string>): Promise<MCPProxy> {
   const openApiSpec = await loadOpenApiSpec(specPath, baseUrl)
   const proxy = new MCPProxy('Notion API', openApiSpec, customHeaders)
 
