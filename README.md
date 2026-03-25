@@ -375,9 +375,16 @@ curl -H "Authorization: Bearer your-token-here" \
 
 **Note:** Make sure to set either the `NOTION_TOKEN` environment variable (recommended) or the `OPENAPI_MCP_HEADERS` environment variable with your Notion integration token when using either transport mode.
 
-##### Dynamic Notion Token (New Feature)
+##### Dynamic Notion Token (Multi-Tenant Support)
 
-This fork supports passing the Notion API token dynamically via HTTP headers, enabling multi-tenant scenarios where different users can use their own Notion workspaces without restarting the server.
+**Key Feature:** This fork enables **multi-tenant architecture** for Notion MCP Server. Instead of binding to a single Notion workspace via environment variables, the server can now handle multiple users/tenants, each with their own Notion Integration token.
+
+**Use Cases:**
+- SaaS applications where multiple users connect their own Notion workspaces
+- AI agents that need to switch between different Notion accounts dynamically
+- Shared MCP server infrastructure without hardcoded credentials
+
+**How it works:** Notion API tokens are passed per-request via HTTP headers, while the server runs without any pre-configured `NOTION_TOKEN` environment variable.
 
 **Authentication Modes:**
 
